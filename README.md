@@ -3,21 +3,35 @@
 ## Introduction
 This annotation task aims to evaluate knowledge gaps in Wikipedia across different languages. You will annotate facts based on their presence in Wikipedia articles using a **terminal-based annotation tool**.
 
-Your contributions will help assess how well factual information is transferred across languages in Wikipedia.
 
 ---
 
 ## Setup Instructions
 ### Prerequisites
 Ensure that you have the following installed:
-- **Python >= 3.7+**
+- **Python 3.7+**
 - **pip** (Python package manager)
+- **Git** (for submitting your annotations)
 
-### Install Required Packages
-Before running the annotation tool, install the necessary dependencies:
+### Activating the Virtual Environment
+A virtual environment (`.venv`) is included in the annotation package. You must activate it before running the script:
+
+#### On macOS/Linux:
 ```bash
-pip install polars==0.19.6 loguru tqdm
+source .venv/bin/activate
 ```
+
+#### On Windows (Command Prompt):
+```cmd
+.venv\Scripts\activate
+```
+
+#### On Windows (PowerShell):
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+Once activated, the terminal should indicate that the virtual environment is in use.
 
 ---
 
@@ -45,10 +59,10 @@ Choose the best option based on the presence of the fact:
 ---
 
 ## Running the Annotation Script
-### Navigate to the Annotation Folder
-Extract the provided annotation package and navigate to the directory:
+### Navigate to the Correct Language Directory
+You must navigate to the appropriate **language directory** before running the annotation script. For example:
 ```bash
-cd /path/to/annotation_package
+cd annotations/english  # or cd annotations/korean
 ```
 
 ### Run the Annotation Tool
@@ -58,29 +72,33 @@ python main_perform_annotation.py
 ```
 - Follow the terminal prompts to annotate facts.
 - Input **A, B, C, D, or E** based on the defined criteria.
-- Your responses will be **automatically saved**.
+- Your responses will be **automatically saved** in a JSON file within the same directory.
 
 ---
 
 ## Submitting Your Annotations
-### Verify Saved Annotations
-Ensure your annotations are saved in the output file provided in the package.
+Since this project is hosted on GitHub, you will need to push your changes after completing the annotation task.
 
-### Submit Your Work
-After completing the annotation task:
-1. **Zip the annotation package** (including the dataset and saved annotation file).
-2. **Send it back** via the designated method (email, Google Drive, etc.).
+### Steps to Submit Your Annotations
+1. **Verify that your annotations are saved** in the JSON file in the respective language directory.
+2. **Ensure that all examples are annotated** before submission.
+3. **Commit and push your changes**:
+   ```bash
+   git add annotations/english/annotations.json  # or annotations/korean/annotations.json
+   git commit -m "Annotated facts for [language]"
+   git push origin main  # Or the branch you were assigned
+   ```
+
+Once you push your changes, I will be able to collect your results from the repository.
 
 ---
 
 ## Troubleshooting & Support
-- If you face **installation errors**, try reinstalling dependencies:
-  ```bash
-  pip install --upgrade polars loguru
-  ```
+- If you face **issues activating the virtual environment**, ensure that you are in the correct directory.
 - If the script fails to run, check if Python is properly installed:
   ```bash
   python --version
   ```
+- For **Git-related issues**, ensure that you have the correct push permissions.
 
 
