@@ -62,7 +62,7 @@ Choose the best option based on the presence of the fact:
 ### Navigate to the Correct Language Directory
 You must navigate to the appropriate **language directory** before running the annotation script. For example:
 ```bash
-cd annotations/english  # or cd annotations/korean
+cd annotations/ko  # for Korean
 ```
 
 ### Run the Annotation Tool
