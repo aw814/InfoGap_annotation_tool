@@ -9,6 +9,7 @@ logger = loguru.logger
 
 
 TARGET_LANG = "Hebrew"
+TGT_LANG_CODE = "he"
 # Some packages you may need to pip install:
 # - polars
 # - loguru
@@ -84,85 +85,79 @@ def load_save_if_nexists(df: pl.DataFrame, path: str):
 def annotate_frame(frame: pl.DataFrame, num_samples, 
     annotation_columns: List[str], question_fns: List[Callable], 
     answer_validate_fn: List[Callable],
+    save_path: str,
     input_fn: Callable = input) -> pl.DataFrame:
-    """Annotate the frame with the given annotation columns
-
-    Args:
-        frame (pl.DataFrame): The frame to annotate
-        num_samples (int): The number of samples to annotate
-        annotation_columns (List[str]): The names of the annotation columns
-        question_fns (List[Callable]): The functions to generate the questions to ask the user
-        answer_column_names (List[str]): The names of the answer columns
-        answer_validate_fn (List[Callable]): The functions to validate the answers
-        csv_save_path (str): The path to save the csv to
-        input_fn (Callable, optional): The function to get the user input. Defaults to input.
-    """
-    # start tqdm bar
-    # check if the annotation columns are not already in the frame
+    """Annotate the frame with the given annotation columns and save intermediate results."""
+    
+    # Ensure annotation columns exist
     for annotation_column in annotation_columns:
         if annotation_column not in frame.columns:
             frame = frame.with_columns([
                 pl.Series(['tbd' for _ in range(len(frame))]).alias(annotation_column)
             ])
-    # add an index to the frame 
-    frame = frame.with_columns([
-        pl.Series(list(range(len(frame)))).alias('index')
-    ])
+    
+    # Add an index column if not already present
+    if 'index' not in frame.columns:
+        frame = frame.with_columns([
+            pl.Series(list(range(len(frame)))).alias('index')
+        ])
 
     subset_frame = get_candidate_annotations(frame, annotation_columns)
     if len(subset_frame) == 0:
         logger.info("No more samples to annotate in this dataframe")
         return frame.drop('index') 
-    # log the number of samples that remain to be annotated
+
     logger.info(f"Number of samples that are unannotated: {len(subset_frame)}")
     pbar = tqdm(total=min(num_samples, len(subset_frame)))
 
     subset_annotation_map = {
         'index': subset_frame['index'].to_list()
     }
-    # # add the annotation columns to the annotation map
+
     for annotation_column in annotation_columns:
         subset_annotation_map[annotation_column] = subset_frame[annotation_column].to_list()
 
     num_annotated = 0
     try:
         for i, index in enumerate(subset_annotation_map['index']):
-            # get the questions to ask the user
-            row = frame[index].to_dicts()[0]
+            row = frame.filter(pl.col('index') == index).to_dicts()[0]
             questions = [question_fn(row) for question_fn in question_fns]
-            # get the answers from the user
             answers = [input_fn(question) for question in questions]
-            # validate the answers
+
             for answer, validate_fn, annotation_column, question in zip(answers, answer_validate_fn, annotation_columns, questions):
                 if validate_fn(answer):
                     subset_annotation_map[annotation_column][i] = answer
                 else:
-                    # ask the user to re-enter the answer
                     while not validate_fn(answer):
                         answer = input(f"Invalid answer. {question}")
                     subset_annotation_map[annotation_column][i] = answer
-            # update the progress bar
+
             num_annotated += 1
             pbar.update(1)
+
+            # Save progress after each annotation
+            subset_frame = pl.DataFrame(subset_annotation_map)
+            result_frame = update_annotations(frame, subset_frame)
+            result_frame.drop('index').write_json(save_path)
+
             if num_annotated >= num_samples:
                 break
-    except KeyboardInterrupt as e:
-        print("Keyboard interrupt detected. Saving frame to csv")
-        raise e
+
+    except KeyboardInterrupt:
+        print("\nAnnotation interrupted. Saving progress before exiting.")
     except Exception as e:
         print(f"An error occurred: {e}")
         import traceback
         traceback.print_exc()
-        raise e
     finally:
+        # Ensure progress is saved even if an error occurs
         subset_frame = pl.DataFrame(subset_annotation_map)
         result_frame = update_annotations(frame, subset_frame)
-        # log the number of non-tbd annotations, out of the total number of annotations
-        logger.info(f"Number of annotations completed: {len(result_frame.filter(pl.col(annotation_columns) != 'tbd'))} out of {len(result_frame)}")
-        # result_frame.write_json(csv_save_path)
-        # return all columns except the index column
-        return result_frame.drop('index')
-        # return result_frame 
+        result_frame.drop('index').write_json(save_path)
+        logger.info(f"Progress saved to {save_path}")
+
+    return result_frame.drop('index')
+
 
 def ask_question(fact_row):
     src_lang = fact_row['language']
@@ -190,18 +185,20 @@ def ask_question(fact_row):
     # else:
     context_str = ''.join([f"{i+1}. {fact}\n" for i, fact in enumerate(context_str)])
 
-    link = en_link if src_lang == TARGET_LANG else tgt_link
+    link = en_link if src_lang == TGT_LANG_CODE else tgt_link
     # question = f"\n\nConsider the following fact(s) about {fact_row['person_name']}:\n\n{context_str}\n\nIs the final fact present in the {tgt_lang} Wikipedia article about {fact_row['person_name']})?\n\nHere are some snippets from the {tgt_lang} article:\n{tgt_contexts_complete}\n\n"
     question = f"\n\nConsider the following fact(s) about {fact_row['person_name']}:\n\n{context_str}\n\nIs the final fact present in the {tgt_lang} Wikipedia article about {fact_row['person_name']} ({link})?\n\nHere are some snippets from the {tgt_lang} article:\n{tgt_contexts_complete}\n\n"
     
     response_options = "\n".join(["A: covered by the snippets", "B: partly covered by the snippets", "C: covered by the article", "D: partly covered by the article", "E: Not in the article"])
     full_prompt = question + response_options + "\nAnswer (A/B/C/D/E): "
     return full_prompt
+
+
 annotated_frame = annotate_frame(
-    frame, # frame containing data to annotate 
-    num_samples=30, # number of samples to annotate in one setting
-    annotation_columns=['sam_annotations'], # column to store the annotation in
+    frame=frame,
+    num_samples=20,
+    annotation_columns=['sam_annotations'],
     question_fns=[ask_question],
-    answer_validate_fn=[lambda answer: answer in ['A', 'B', 'C', 'D', 'E']]
+    answer_validate_fn=[lambda answer: answer in ['A', 'B', 'C', 'D', 'E']],
+    save_path=ANNOTATION_FNAME  # Ensure intermediate saving
 )
-annotated_frame.write_json(ANNOTATION_FNAME)
