@@ -26,7 +26,7 @@ TARGET_LANG = "Bangla"
     ## If the fact is not present in the article, answer 'E'.
 ## It is up to your discretion to decide whether a fact is "mostly" present in the snippets or the article.
 
-ANNOTATION_FNAME = "annotation_2025-02-18_Dosa (food).json" # TODO: set to whatever directory you want to save the annotations to
+ANNOTATION_FNAME = "annotation_2025-02-20_Dosa (food).json" # TODO: set to whatever directory you want to save the annotations to
 frame = pl.read_json(ANNOTATION_FNAME)
 en_link = "https://en.wikipedia.org/wiki/Dosa_(food)"
 tgt_link = "https://bn.wikipedia.org/wiki/%E0%A6%A7%E0%A7%8B%E0%A6%B8%E0%A6%BE"

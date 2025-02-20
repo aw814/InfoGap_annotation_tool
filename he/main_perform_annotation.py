@@ -27,7 +27,7 @@ TGT_LANG_CODE = "he"
     ## If the fact is not present in the article, answer 'E'.
 ## It is up to your discretion to decide whether a fact is "mostly" present in the snippets or the article.
 
-ANNOTATION_FNAME = "annotation_2025-02-18_Hummus.json" # TODO: set to whatever directory you want to save the annotations to
+ANNOTATION_FNAME = "annotation_2025-02-20_Hummus.json" # TODO: set to whatever directory you want to save the annotations to
 frame = pl.read_json(ANNOTATION_FNAME)
 en_link = "https://en.wikipedia.org/wiki/Hummus"
 tgt_link = "https://he.wikipedia.org/wiki/%D7%97%D7%95%D7%9E%D7%95%D7%A1"
@@ -196,7 +196,7 @@ def ask_question(fact_row):
 
 annotated_frame = annotate_frame(
     frame=frame,
-    num_samples=20,
+    num_samples=30,
     annotation_columns=['sam_annotations'],
     question_fns=[ask_question],
     answer_validate_fn=[lambda answer: answer in ['A', 'B', 'C', 'D', 'E']],
